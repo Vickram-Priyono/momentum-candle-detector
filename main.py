@@ -6,15 +6,15 @@ import mplfinance as mpf
 from datetime import datetime
 
 # === KONFIGURASI ===
-API_KEY = '4Z1PMFKZWH9I7JPB'
+API_KEY = 'MASUKKAN_API_KEY_ALPHA_VANTAGE'
 symbol_from = 'XAU'
 symbol_to = 'USD'
 interval = '15min'
 pip_factor = 0.1  # 1 pip = 0.01 untuk XAUUSD
 min_body_pips = 60
 max_wick_pct = 0.2
-token = '7615128019:AAEkB1qBE1Yjr-c7JqaN9xwAchzm-siNcpU'
-chat_id = '6842727078'
+token = 'TOKEN_BOT_TELEGRAM'
+chat_id = 'CHAT_ID_TELEGRAM'
 
 # === SETUP LOGGING ===
 log_file = "momentum_log.txt"
@@ -82,22 +82,36 @@ def fetch_candles():
     url = f'https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol={symbol_from}&to_symbol={symbol_to}&interval={interval}&outputsize=compact&apikey={API_KEY}'
     response = requests.get(url)
     data = response.json()
-    candles = data.get(f'Time Series FX ({interval})', {})
+
+    candles = data.get(f'Time Series FX ({interval})')
+    if not candles:
+        print("❌ Gagal ambil data dari Alpha Vantage:", data)
+        return pd.DataFrame()
+
     records = []
     for ts, val in candles.items():
-        records.append({
-            'timestamp': pd.to_datetime(ts),
-            'open': float(val['1. open']),
-            'high': float(val['2. high']),
-            'low': float(val['3. low']),
-            'close': float(val['4. close'])
-        })
+        try:
+            records.append({
+                'timestamp': pd.to_datetime(ts),
+                'open': float(val['1. open']),
+                'high': float(val['2. high']),
+                'low': float(val['3. low']),
+                'close': float(val['4. close'])
+            })
+        except:
+            continue
+
     df = pd.DataFrame(records)
-    df = df.sort_values('timestamp').reset_index(drop=True)
-    return df
+
+    if 'timestamp' not in df.columns:
+        print("❌ Kolom 'timestamp' tidak ditemukan.")
+        return pd.DataFrame()
+
+    return df.sort_values('timestamp').reset_index(drop=True)
 
 # === MAIN LOOP ===
 print("🚀 Monitoring momentum candle dari Alpha Vantage...\n")
+
 try:
     while True:
         now = pd.Timestamp.now()
@@ -106,9 +120,8 @@ try:
         minute_in_candle = minute % 15
 
         df_all = fetch_candles()
-
-        if len(df_all) < 2:
-            print("❌ Data candle tidak cukup")
+        if df_all.empty or len(df_all) < 2:
+            print("❌ Data tidak cukup. Coba lagi nanti.")
             time.sleep(60)
             continue
 
@@ -124,6 +137,9 @@ try:
 
         else:
             time.sleep(5)
+
+        # Hindari rate limit dari Alpha Vantage
+        time.sleep(12)
 
 except KeyboardInterrupt:
     print("\n⛔ Dihentikan oleh pengguna.")

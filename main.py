@@ -6,10 +6,9 @@ import mplfinance as mpf
 from datetime import datetime
 
 # === KONFIGURASI ===
-API_KEY = '4Z1PMFKZWH9I7JPB'
-symbol_from = 'XAU'
-symbol_to = 'USD'
-interval = '15min'
+GOLD_API_KEY = 'goldapi-1qe0smci31xqy-io'
+symbol = 'XAU/USD'  # sesuai format GoldAPI
+interval_minutes = 15
 pip_factor = 0.1  # 1 pip = 0.01 untuk XAUUSD
 min_body_pips = 60
 max_wick_pct = 0.2
@@ -18,9 +17,7 @@ chat_id = '6842727078'
 
 # === SETUP LOGGING ===
 log_file = "momentum_log.txt"
-logging.basicConfig(filename=log_file,
-                    level=logging.INFO,
-                    format='%(asctime)s | %(message)s')
+logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s | %(message)s')
 
 # === TELEGRAM ALERT ===
 def send_alert(message):
@@ -56,6 +53,37 @@ def send_chart(df_chart, title):
     except Exception as e:
         print("❌ Error kirim chart:", e)
 
+# === AMBIL DATA CANDLE MANUAL DARI GOLDAPI.IO ===
+def fetch_candles():
+    url = f"https://www.goldapi.io/api/XAU/USD"
+    headers = {
+        "x-access-token": GOLD_API_KEY,
+        "Content-Type": "application/json"
+    }
+
+    records = []
+    for i in range(10, 0, -1):
+        ts = datetime.utcnow() - pd.Timedelta(minutes=i * interval_minutes)
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            print("❌ Gagal ambil data:", response.text)
+            continue
+        data = response.json()
+        try:
+            records.append({
+                'timestamp': ts,
+                'open': float(data['open_price']),
+                'high': float(data['high_price']),
+                'low': float(data['low_price']),
+                'close': float(data['price'])
+            })
+        except:
+            continue
+        time.sleep(1.2)  # delay agar tidak kena rate limit
+
+    df = pd.DataFrame(records)
+    return df
+
 # === CEK MOMENTUM ===
 def process_candle(candle, df_chart, preview=False):
     open_, high, low, close = candle['open'], candle['high'], candle['low'], candle['close']
@@ -77,47 +105,15 @@ def process_candle(candle, df_chart, preview=False):
     else:
         print(f"Tidak ada momentum ({jenis}) di candle {time_str.strftime('%Y-%m-%d %H:%M')}")
 
-# === AMBIL DATA dari ALPHA VANTAGE ===
-def fetch_candles():
-    url = f'https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol={symbol_from}&to_symbol={symbol_to}&interval={interval}&outputsize=compact&apikey={API_KEY}'
-    response = requests.get(url)
-    data = response.json()
-
-    candles = data.get(f'Time Series FX ({interval})')
-    if not candles:
-        print("❌ Gagal ambil data dari Alpha Vantage:", data)
-        return pd.DataFrame()
-
-    records = []
-    for ts, val in candles.items():
-        try:
-            records.append({
-                'timestamp': pd.to_datetime(ts),
-                'open': float(val['1. open']),
-                'high': float(val['2. high']),
-                'low': float(val['3. low']),
-                'close': float(val['4. close'])
-            })
-        except:
-            continue
-
-    df = pd.DataFrame(records)
-
-    if 'timestamp' not in df.columns:
-        print("❌ Kolom 'timestamp' tidak ditemukan.")
-        return pd.DataFrame()
-
-    return df.sort_values('timestamp').reset_index(drop=True)
-
 # === MAIN LOOP ===
-print("🚀 Monitoring momentum candle dari Alpha Vantage...\n")
+print("🚀 Monitoring momentum candle dari GoldAPI.io...\n")
 
 try:
     while True:
         now = pd.Timestamp.now()
         second = now.second
         minute = now.minute
-        minute_in_candle = minute % 15
+        minute_in_candle = minute % interval_minutes
 
         df_all = fetch_candles()
         if df_all.empty or len(df_all) < 2:
@@ -137,9 +133,6 @@ try:
 
         else:
             time.sleep(5)
-
-        # Hindari rate limit dari Alpha Vantage
-        time.sleep(12)
 
 except KeyboardInterrupt:
     print("\n⛔ Dihentikan oleh pengguna.")

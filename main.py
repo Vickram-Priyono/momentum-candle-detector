@@ -6,7 +6,7 @@ import mplfinance as mpf
 from datetime import datetime
 
 # === KONFIGURASI ===
-API_KEY = 'MASUKKAN_API_KEY_ALPHA_VANTAGE'
+API_KEY = '4Z1PMFKZWH9I7JPB'
 symbol_from = 'XAU'
 symbol_to = 'USD'
 interval = '15min'

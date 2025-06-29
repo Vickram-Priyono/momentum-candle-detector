@@ -6,6 +6,9 @@ import logging
 import os
 import mplfinance as mpf
 from datetime import datetime
+from keep_alive import keep_alive
+keep_alive()
+
 
 # === KONFIGURASI ===
 symbol = "XAU/USDT:USDT"  # pair dari Bybit (spot/perpetual)

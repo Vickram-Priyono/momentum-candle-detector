@@ -3,7 +3,8 @@ import time
 import requests
 import logging
 import mplfinance as mpf
-from datetime import datetime
+from datetime import datetime, timezone
+
 
 # === KONFIGURASI ===
 GOLD_API_KEY = 'goldapi-1qe0smci31xqy-io'
@@ -63,7 +64,7 @@ def fetch_candles():
 
     records = []
     for i in range(10, 0, -1):
-        ts = datetime.utcnow() - pd.Timedelta(minutes=i * interval_minutes)
+        ts = datetime.now(timezone.utc) - pd.Timedelta(minutes=i * interval_minutes)
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
             print("❌ Gagal ambil data:", response.text)

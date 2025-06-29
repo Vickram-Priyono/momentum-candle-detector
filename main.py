@@ -13,8 +13,8 @@ interval = '15min'
 pip_factor = 0.1  # 1 pip = 0.01 untuk XAUUSD
 min_body_pips = 60
 max_wick_pct = 0.2
-token = 'TOKEN_BOT_TELEGRAM'
-chat_id = 'CHAT_ID_TELEGRAM'
+token = '7615128019:AAEkB1qBE1Yjr-c7JqaN9xwAchzm-siNcpU'
+chat_id = '6842727078'
 
 # === SETUP LOGGING ===
 log_file = "momentum_log.txt"
